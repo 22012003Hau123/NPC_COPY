@@ -1,0 +1,1552 @@
+{
+  "name": "NPC_copy_doc",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 45
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -20,
+        740
+      ],
+      "id": "c077123c-02db-4b2f-835b-5d63365e4b81",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = [];\n\nconst inputItems = $items(\"Google Sheets4\");\n\ninputItems.forEach(item => {\n  const row = item.json;\n  let firstWordOfFirstLine = null;\n\n  Object.keys(row).forEach(key => {\n    const value = row[key];\n\n    if (typeof value === \"string\" && value.includes('\\n') && key === \"Grammar\") {\n      const lines = value.split('\\n');\n      lines.forEach((line, index) => {\n        const trimmedLine = line.trim();\n\n        // Tạo webhook dòng gốc\n        const wordsKey = `${key} [${index + 1}]`;\n        data.push({\n          key: wordsKey,\n          value: trimmedLine\n        });\n\n        // Đếm số từ trong dòng\n        const wordCount = trimmedLine.split(',').map(w => w.trim()).filter(w => w).length;\n        data.push({\n          key: `now [${index + 1}]`,\n          value: wordCount\n        });\n\n        // Lưu từ đầu tiên của dòng đầu tiên\n        if (index === 0) {\n          const firstWord = trimmedLine.split(',')[0].trim();\n          if (firstWord.length > 0) {\n            firstWordOfFirstLine = firstWord;\n          }\n        }\n      });\n    } else {\n      // Nếu không phải \"Words\" hoặc không có \\n thì giữ nguyên\n      data.push({\n        key: key,\n        value: value\n      });\n    }\n  });\n\n  // Đẩy webhook cuối cùng là từ đầu tiên của Words [1]\n  if (firstWordOfFirstLine !== null) {\n    data.push({\n      key: \"First word of Words [1]\",\n      value: firstWordOfFirstLine\n    });\n  }\n});\n\nreturn {\n  webhook_data: data,\n  pairedItem: 0,\n};\n"
+      },
+      "id": "02e7eb68-d587-4ca4-a794-33cd4b427fc9",
+      "name": "Format form data1",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1420,
+        760
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = [];\n\n$('Format form data1').all().map((item) => {\n  item.json.webhook_data.map((data) => {\n    if (\"submittedAt\" !== data.key && \"formMode\" !== data.key) {\n      result.push({\n        \"replaceAllText\": {\n            \"containsText\": {\n              \"text\": `{{${data.key}}}`, \n              \"matchCase\": true\n            },\n            \"replaceText\": `${data.value}`\n        },\n      });\n    }\n  });\n})\n\nreturn {\n  data: result,\n  pairedItem: 0,\n};"
+      },
+      "id": "d032360b-49ce-4381-8560-9ef7e1cd5fd2",
+      "name": "Format form data to Google Doc API1",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1640,
+        760
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://docs.googleapis.com/v1/documents/{{ $('Copy template 2G').item.json.id }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "requests",
+              "value": "={{ $json.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "226c7d85-70dd-4147-818e-e872aacebbe1",
+      "name": "Replace data in Google Doc1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1860,
+        760
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "taVdxGz86xIw0YUF",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA",
+          "mode": "list",
+          "cachedResultName": "NPC_Copy",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Trang tính1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Todo"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        420,
+        740
+      ],
+      "id": "5b697b84-3479-4e72-8322-721c17656a5d",
+      "name": "Google Sheets4",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "63kj6eOHsxw04bpG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA",
+          "mode": "list",
+          "cachedResultName": "NPC_Copy",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Trang tính1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Done",
+            "Link": "=https://docs.google.com/document/d/{{ $json.documentId }}",
+            "Topic": "={{ $('Google Sheets4').item.json.Topic }}"
+          },
+          "matchingColumns": [
+            "Topic"
+          ],
+          "schema": [
+            {
+              "id": "STT",
+              "displayName": "STT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Level",
+              "displayName": "Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Unit",
+              "displayName": "Unit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lesson",
+              "displayName": "Lesson",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "New words",
+              "displayName": "New words",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 1",
+              "displayName": "Grammar 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 2",
+              "displayName": "Grammar 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 3",
+              "displayName": "Grammar 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2200,
+        760
+      ],
+      "id": "5b741caf-573d-4daa-ab51-18c941c39ab6",
+      "name": "Google Sheets5",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "63kj6eOHsxw04bpG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        740
+      ],
+      "id": "e4f3844e-8eaa-4b2a-960e-68576b0ecd10",
+      "name": "Wait1",
+      "webhookId": "08da3c8a-0c2a-4bde-b433-341818c3c710"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  let count = 0;\n\n  // Kiểm tra từng trường Grammar\n  for (let i = 1; i <= 5; i++) {\n    const grammarField = item.json[`Grammar ${i}`];\n    if (grammarField && grammarField.trim() !== '') {\n      count++;\n    }\n  }\n\n  // Thêm trường mới để lưu số lượng Grammar\n  item.json.grammarCount = count;\n}\n\nreturn $input.all();\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        720
+      ],
+      "id": "5e3227c0-c8ea-4ef4-8863-32628542a6d1",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.grammarCount }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    },
+                    "id": "a7e0d81a-916d-4218-9b4d-f5fde82afd6f"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a4cfe95f-d8c1-4bca-be6b-3c42eac51ff1",
+                    "leftValue": "={{ $json.grammarCount }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5b369708-8e0e-4818-8487-5f19b9ca7771",
+                    "leftValue": "={{ $json.grammarCount }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3c030c22-6f90-4acd-8b1e-5f3d1802c9ee",
+                    "leftValue": "={{ $json.grammarCount }}",
+                    "rightValue": 3,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        840,
+        700
+      ],
+      "id": "364cee9e-a215-4da6-9f1a-1cf1730ce691",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = [];\n\nconst inputItems = $items(\"Google Sheets4\");\n\ninputItems.forEach(item => {\n  const row = item.json;\n  let firstWordOfFirstLine = null;\n\n  Object.keys(row).forEach(key => {\n    const value = row[key];\n\n    if (typeof value === \"string\" && value.includes('\\n') && key === \"Grammar\") {\n      const lines = value.split('\\n');\n      lines.forEach((line, index) => {\n        const trimmedLine = line.trim();\n\n        // Tạo webhook dòng gốc\n        const wordsKey = `${key} [${index + 1}]`;\n        data.push({\n          key: wordsKey,\n          value: trimmedLine\n        });\n\n        // Đếm số từ trong dòng\n        const wordCount = trimmedLine.split(',').map(w => w.trim()).filter(w => w).length;\n        data.push({\n          key: `now [${index + 1}]`,\n          value: wordCount\n        });\n\n        // Lưu từ đầu tiên của dòng đầu tiên\n        if (index === 0) {\n          const firstWord = trimmedLine.split(',')[0].trim();\n          if (firstWord.length > 0) {\n            firstWordOfFirstLine = firstWord;\n          }\n        }\n      });\n    } else {\n      // Nếu không phải \"Words\" hoặc không có \\n thì giữ nguyên\n      data.push({\n        key: key,\n        value: value\n      });\n    }\n  });\n\n  // Đẩy webhook cuối cùng là từ đầu tiên của Words [1]\n  if (firstWordOfFirstLine !== null) {\n    data.push({\n      key: \"First word of Words [1]\",\n      value: firstWordOfFirstLine\n    });\n  }\n});\n\nreturn {\n  webhook_data: data,\n  pairedItem: 0,\n};\n"
+      },
+      "id": "27f58c90-d628-4fc1-b63f-7c503f89e254",
+      "name": "Format form data2",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1420,
+        440
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = [];\n\n$('Format form data2').all().map((item) => {\n  item.json.webhook_data.map((data) => {\n    if (\"submittedAt\" !== data.key && \"formMode\" !== data.key) {\n      result.push({\n        \"replaceAllText\": {\n            \"containsText\": {\n              \"text\": `{{${data.key}}}`, \n              \"matchCase\": true\n            },\n            \"replaceText\": `${data.value}`\n        },\n      });\n    }\n  });\n})\n\nreturn {\n  data: result,\n  pairedItem: 0,\n};"
+      },
+      "id": "b02e4fc2-85cb-4f6d-a9b0-515cfb9c4907",
+      "name": "Format form data to Google Doc API2",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1640,
+        440
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://docs.googleapis.com/v1/documents/{{ $('Copy template 0G').item.json.id }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "requests",
+              "value": "={{ $json.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9492a929-aa9d-4855-9e16-c3233b2e14df",
+      "name": "Replace data in Google Doc2",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1860,
+        440
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "taVdxGz86xIw0YUF",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA",
+          "mode": "list",
+          "cachedResultName": "NPC_Copy",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Trang tính1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Done",
+            "Link": "=https://docs.google.com/document/d/{{ $json.documentId }}",
+            "Topic": "={{ $('Google Sheets4').item.json.Topic }}"
+          },
+          "matchingColumns": [
+            "Topic"
+          ],
+          "schema": [
+            {
+              "id": "STT",
+              "displayName": "STT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Level",
+              "displayName": "Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Unit",
+              "displayName": "Unit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lesson",
+              "displayName": "Lesson",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "New words",
+              "displayName": "New words",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 1",
+              "displayName": "Grammar 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 2",
+              "displayName": "Grammar 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 3",
+              "displayName": "Grammar 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2180,
+        440
+      ],
+      "id": "58f8aa56-0566-4af6-b51e-227101820b55",
+      "name": "Google Sheets6",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "63kj6eOHsxw04bpG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = [];\n\nconst inputItems = $items(\"Google Sheets4\");\n\ninputItems.forEach(item => {\n  const row = item.json;\n  let firstWordOfFirstLine = null;\n\n  Object.keys(row).forEach(key => {\n    const value = row[key];\n\n    if (typeof value === \"string\" && value.includes('\\n') && key === \"Grammar\") {\n      const lines = value.split('\\n');\n      lines.forEach((line, index) => {\n        const trimmedLine = line.trim();\n\n        // Tạo webhook dòng gốc\n        const wordsKey = `${key} [${index + 1}]`;\n        data.push({\n          key: wordsKey,\n          value: trimmedLine\n        });\n\n        // Đếm số từ trong dòng\n        const wordCount = trimmedLine.split(',').map(w => w.trim()).filter(w => w).length;\n        data.push({\n          key: `now [${index + 1}]`,\n          value: wordCount\n        });\n\n        // Lưu từ đầu tiên của dòng đầu tiên\n        if (index === 0) {\n          const firstWord = trimmedLine.split(',')[0].trim();\n          if (firstWord.length > 0) {\n            firstWordOfFirstLine = firstWord;\n          }\n        }\n      });\n    } else {\n      // Nếu không phải \"Words\" hoặc không có \\n thì giữ nguyên\n      data.push({\n        key: key,\n        value: value\n      });\n    }\n  });\n\n  // Đẩy webhook cuối cùng là từ đầu tiên của Words [1]\n  if (firstWordOfFirstLine !== null) {\n    data.push({\n      key: \"First word of Words [1]\",\n      value: firstWordOfFirstLine\n    });\n  }\n});\n\nreturn {\n  webhook_data: data,\n  pairedItem: 0,\n};\n"
+      },
+      "id": "a01c4a11-80c6-4fc1-bdf6-a8bc0d867da4",
+      "name": "Format form data3",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1440,
+        600
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = [];\n\n$('Format form data3').all().map((item) => {\n  item.json.webhook_data.map((data) => {\n    if (\"submittedAt\" !== data.key && \"formMode\" !== data.key) {\n      result.push({\n        \"replaceAllText\": {\n            \"containsText\": {\n              \"text\": `{{${data.key}}}`, \n              \"matchCase\": true\n            },\n            \"replaceText\": `${data.value}`\n        },\n      });\n    }\n  });\n})\n\nreturn {\n  data: result,\n  pairedItem: 0,\n};"
+      },
+      "id": "210cd9c6-0c60-43bf-9c1d-c3f3e5c51274",
+      "name": "Format form data to Google Doc API3",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1640,
+        600
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://docs.googleapis.com/v1/documents/{{ $('Copy template 1G').item.json.id }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "requests",
+              "value": "={{ $json.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9b3b2010-142b-4678-8ef5-69dbba10d5f4",
+      "name": "Replace data in Google Doc3",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1860,
+        600
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "taVdxGz86xIw0YUF",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA",
+          "mode": "list",
+          "cachedResultName": "NPC_Copy",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Trang tính1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Done",
+            "Link": "=https://docs.google.com/document/d/{{ $json.documentId }}",
+            "Topic": "={{ $('Google Sheets4').item.json.Topic }}"
+          },
+          "matchingColumns": [
+            "Topic"
+          ],
+          "schema": [
+            {
+              "id": "STT",
+              "displayName": "STT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Level",
+              "displayName": "Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Unit",
+              "displayName": "Unit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lesson",
+              "displayName": "Lesson",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "New words",
+              "displayName": "New words",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 1",
+              "displayName": "Grammar 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 2",
+              "displayName": "Grammar 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 3",
+              "displayName": "Grammar 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2180,
+        600
+      ],
+      "id": "2e990313-dada-4896-998a-dc8ae5fb46a6",
+      "name": "Google Sheets7",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "63kj6eOHsxw04bpG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = [];\n\nconst inputItems = $items(\"Google Sheets4\");\n\ninputItems.forEach(item => {\n  const row = item.json;\n  let firstWordOfFirstLine = null;\n\n  Object.keys(row).forEach(key => {\n    const value = row[key];\n\n    if (typeof value === \"string\" && value.includes('\\n') && key === \"Grammar\") {\n      const lines = value.split('\\n');\n      lines.forEach((line, index) => {\n        const trimmedLine = line.trim();\n\n        // Tạo webhook dòng gốc\n        const wordsKey = `${key} [${index + 1}]`;\n        data.push({\n          key: wordsKey,\n          value: trimmedLine\n        });\n\n        // Đếm số từ trong dòng\n        const wordCount = trimmedLine.split(',').map(w => w.trim()).filter(w => w).length;\n        data.push({\n          key: `now [${index + 1}]`,\n          value: wordCount\n        });\n\n        // Lưu từ đầu tiên của dòng đầu tiên\n        if (index === 0) {\n          const firstWord = trimmedLine.split(',')[0].trim();\n          if (firstWord.length > 0) {\n            firstWordOfFirstLine = firstWord;\n          }\n        }\n      });\n    } else {\n      // Nếu không phải \"Words\" hoặc không có \\n thì giữ nguyên\n      data.push({\n        key: key,\n        value: value\n      });\n    }\n  });\n\n  // Đẩy webhook cuối cùng là từ đầu tiên của Words [1]\n  if (firstWordOfFirstLine !== null) {\n    data.push({\n      key: \"First word of Words [1]\",\n      value: firstWordOfFirstLine\n    });\n  }\n});\n\nreturn {\n  webhook_data: data,\n  pairedItem: 0,\n};\n"
+      },
+      "id": "80246abf-5381-422f-88d7-76571161b5a9",
+      "name": "Format form data4",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1420,
+        920
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = [];\n\n$('Format form data4').all().map((item) => {\n  item.json.webhook_data.map((data) => {\n    if (\"submittedAt\" !== data.key && \"formMode\" !== data.key) {\n      result.push({\n        \"replaceAllText\": {\n            \"containsText\": {\n              \"text\": `{{${data.key}}}`, \n              \"matchCase\": true\n            },\n            \"replaceText\": `${data.value}`\n        },\n      });\n    }\n  });\n})\n\nreturn {\n  data: result,\n  pairedItem: 0,\n};"
+      },
+      "id": "27ae7238-ea86-4866-81cb-0e497c6a094e",
+      "name": "Format form data to Google Doc API4",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1620,
+        920
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://docs.googleapis.com/v1/documents/{{ $('Copy template 3G').item.json.id }}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "requests",
+              "value": "={{ $json.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "19ed1aa9-d899-4a99-bb47-fe465cb87798",
+      "name": "Replace data in Google Doc4",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1860,
+        920
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "taVdxGz86xIw0YUF",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA",
+          "mode": "list",
+          "cachedResultName": "NPC_Copy",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Trang tính1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13PtcXpW31QWh3o1zgkFuAmDtLxfs1XwHGP8-iLaelpA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Done",
+            "Link": "=https://docs.google.com/document/d/{{ $json.documentId }}",
+            "Topic": "={{ $('Google Sheets4').item.json.Topic }}"
+          },
+          "matchingColumns": [
+            "Topic"
+          ],
+          "schema": [
+            {
+              "id": "STT",
+              "displayName": "STT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Level",
+              "displayName": "Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Unit",
+              "displayName": "Unit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lesson",
+              "displayName": "Lesson",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "New words",
+              "displayName": "New words",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 1",
+              "displayName": "Grammar 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 2",
+              "displayName": "Grammar 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grammar 3",
+              "displayName": "Grammar 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2180,
+        920
+      ],
+      "id": "99b15408-25e7-445d-9e43-a20213c2b923",
+      "name": "Google Sheets8",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "63kj6eOHsxw04bpG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "1Xz5Z13ZkZCJOFWObLECA61_3Fk_SG80JTsXzJJSltGA",
+          "mode": "list",
+          "cachedResultName": "PromptForPracticeAfterEachLesson_Template_0G",
+          "cachedResultUrl": "https://docs.google.com/document/d/1Xz5Z13ZkZCJOFWObLECA61_3Fk_SG80JTsXzJJSltGA/edit?usp=drivesdk"
+        },
+        "name": "=Level-{{ $json.Level }}_Unit-{{ $json.Unit }}_Lesson-{{ $json.Lesson }}-NPC",
+        "options": {}
+      },
+      "id": "a09455f4-9c36-4d36-af6c-3d60a9ce5196",
+      "name": "Copy template 0G",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        1220,
+        440
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "6EMMO30VF3mYbEfU",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "1YKcdUmAukgWfL1AU0b2GQ-uVq6vC4cR9Vmt72eZkwhM",
+          "mode": "list",
+          "cachedResultName": "PromptForPracticeAfterEachLesson_Template_1G",
+          "cachedResultUrl": "https://docs.google.com/document/d/1YKcdUmAukgWfL1AU0b2GQ-uVq6vC4cR9Vmt72eZkwhM/edit?usp=drivesdk"
+        },
+        "name": "=Level-{{ $json.Level }}_Unit-{{ $json.Unit }}_Lesson-{{ $json.Lesson }}-NPC",
+        "options": {}
+      },
+      "id": "a65e4863-36ca-45ee-8034-1f7bab41b26e",
+      "name": "Copy template 1G",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        1220,
+        600
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "6EMMO30VF3mYbEfU",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "1IQ7VHBCWnvyb5ZMZ1ufAKsH5_EkgWPWKQ9Mx49bnFZ8",
+          "mode": "list",
+          "cachedResultName": "PromptForPracticeAfterEachLesson_Template",
+          "cachedResultUrl": "https://docs.google.com/document/d/1IQ7VHBCWnvyb5ZMZ1ufAKsH5_EkgWPWKQ9Mx49bnFZ8/edit?usp=drivesdk"
+        },
+        "name": "=Level-{{ $json.Level }}_Unit-{{ $json.Unit }}_Lesson-{{ $json.Lesson }}-NPC",
+        "options": {}
+      },
+      "id": "9590f177-b4ef-4053-833f-1426c48f6b4b",
+      "name": "Copy template 2G",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        1220,
+        760
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "6EMMO30VF3mYbEfU",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "1Wr7OFIJ4Sbhk9DKaDIDtVmfmNuxf-OmOSFIMRwmzMoE",
+          "mode": "list",
+          "cachedResultName": "PromptForPracticeAfterEachLesson_Template_3G",
+          "cachedResultUrl": "https://docs.google.com/document/d/1Wr7OFIJ4Sbhk9DKaDIDtVmfmNuxf-OmOSFIMRwmzMoE/edit?usp=drivesdk"
+        },
+        "name": "=Level-{{ $json.Level }}_Unit-{{ $json.Unit }}_Lesson-{{ $json.Lesson }}-NPC",
+        "options": {}
+      },
+      "id": "0b600d27-5d33-46b4-b88f-eeaef6698ae2",
+      "name": "Copy template 3G",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        1220,
+        920
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "6EMMO30VF3mYbEfU",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format form data1": {
+      "main": [
+        [
+          {
+            "node": "Format form data to Google Doc API1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format form data to Google Doc API1": {
+      "main": [
+        [
+          {
+            "node": "Replace data in Google Doc1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace data in Google Doc1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets4": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Copy template 0G",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Copy template 1G",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Copy template 2G",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Copy template 3G",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format form data2": {
+      "main": [
+        [
+          {
+            "node": "Format form data to Google Doc API2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format form data to Google Doc API2": {
+      "main": [
+        [
+          {
+            "node": "Replace data in Google Doc2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace data in Google Doc2": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format form data3": {
+      "main": [
+        [
+          {
+            "node": "Format form data to Google Doc API3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format form data to Google Doc API3": {
+      "main": [
+        [
+          {
+            "node": "Replace data in Google Doc3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace data in Google Doc3": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format form data4": {
+      "main": [
+        [
+          {
+            "node": "Format form data to Google Doc API4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format form data to Google Doc API4": {
+      "main": [
+        [
+          {
+            "node": "Replace data in Google Doc4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace data in Google Doc4": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy template 0G": {
+      "main": [
+        [
+          {
+            "node": "Format form data2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy template 1G": {
+      "main": [
+        [
+          {
+            "node": "Format form data3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy template 2G": {
+      "main": [
+        [
+          {
+            "node": "Format form data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy template 3G": {
+      "main": [
+        [
+          {
+            "node": "Format form data4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets6": {
+      "main": [
+        []
+      ]
+    },
+    "Google Sheets7": {
+      "main": [
+        []
+      ]
+    },
+    "Google Sheets5": {
+      "main": [
+        []
+      ]
+    },
+    "Google Sheets8": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9cea8258-c4f8-4982-b167-bedb5009f8a0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8e5ab1ef70ef9c8fab82ccb6483e74a1b495ef77d5af0a50c7a1fcb299b6fb46"
+  },
+  "id": "e6DCInxe78xcpkUu",
+  "tags": []
+}
